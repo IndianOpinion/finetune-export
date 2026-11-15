@@ -474,7 +474,11 @@ so in those words.
 
 94. Export files are removed only by: (a) the retention setting, or (b) the
     operator pressing "Delete" on a job, or the WP-CLI delete command. Nothing
-    else in the plugin removes a file.
+    else in the plugin removes an export file, including uninstall (case 102).
+    Each removal is recorded in the job history with the time, the user id
+    for an operator delete, and the reason `retention` or `operator`. The
+    only other file the plugin deletes is its own canary probe (case 68),
+    which is not an export file.
 95. The retention setting is a number of days, default 14, or "keep until I
     delete". It is shown on the screen next to every file, as "removed on
     <date>" or "kept until deleted".
@@ -494,9 +498,10 @@ so in those words.
      delete job records explicitly.
 101. Deactivation removes scheduled events and nothing else.
 102. Uninstall removes options, the job table and the per-post opt-out meta.
-     It removes export files only when the setting "delete export files on
-     uninstall" is on (off by default). Otherwise it leaves them, and the
-     uninstall notice in the README and readme.txt says where they are.
+     It never removes export files, because the job history that records
+     removals goes with the table. The README and readme.txt tell the
+     operator to delete files first, with the Delete button or the WP-CLI
+     delete command, and say where any remaining files are.
 
 ### 4.13 Failure modes
 
@@ -652,7 +657,6 @@ Case 102. On multisite, uninstall runs per site.
 | Link lifetime | 60 minutes | 5 minutes to 7 days |
 | Email me the link | off | |
 | Retention | 14 days | or "keep until I delete" |
-| Delete files on uninstall | off | |
 | Preview size | 5 | at most 50 |
 
 Settings may also be set by constants named `FINETUNE_EXPORT_<SETTING>` in
@@ -873,7 +877,7 @@ layer for WordPress.
 87. (93) Preview and count refuse users without the capability.
 88. (94) No code path other than retention and operator delete removes a
     file (grep test over the source for file removal calls, plus behaviour
-    tests).
+    tests), and each removal by either path is logged in the job history.
 89. (95) The screen shows the removal date or "kept until deleted".
 90. (96) Retention removes only files past the period, records each removal,
     and retries a failed one the next day.
@@ -883,8 +887,8 @@ layer for WordPress.
 93. (99) Removing a file revokes its links.
 94. (100) Job records survive file removal and contain no post text.
 95. (101) Deactivation clears scheduled events only.
-96. (102) Uninstall removes options, table and opt-out meta; files stay
-    unless the setting is on.
+96. (102) Uninstall removes options, table and opt-out meta; export files
+    always stay.
 97. (Failure table) Each row of section 4.13 has a test that reproduces the
     failure and asserts the outcome.
 
