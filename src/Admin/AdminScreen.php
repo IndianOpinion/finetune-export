@@ -377,10 +377,10 @@ final class AdminScreen
         foreach ($job->files as $file) {
             $hasFiles = $hasFiles || in_array($file['state'] ?? '', ['part', 'present', 'removal_failed'], true);
         }
-        if ($hasFiles && !in_array($job->state, [Job::QUEUED, Job::RUNNING], true)) {
+        if ($hasFiles && $job->isFinal()) {
             $this->button('delete_files', __('Delete files', 'finetune-export'), ['job' => $job->id], 'delete');
         }
-        if (!$hasFiles && !in_array($job->state, [Job::QUEUED, Job::RUNNING], true)) {
+        if (!$hasFiles && $job->isFinal()) {
             $this->button('delete_record', __('Delete job record', 'finetune-export'), ['job' => $job->id], 'delete');
         }
         echo '</p>';

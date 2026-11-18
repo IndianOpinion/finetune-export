@@ -100,7 +100,7 @@ final class ProfileForm
             $this->text('placeholders][' . $type, sprintf(__('Placeholder for %s', 'finetune-export'), $type), (string) $data['placeholders'][$type]);
         }
         foreach (['users' => __('Names of site users', 'finetune-export'), 'operator' => __('My list of names', 'finetune-export'), 'honorifics' => __('Honorific followed by capitalised words', 'finetune-export'), 'filter' => __('Names from the name-source filter', 'finetune-export')] as $source => $label) {
-            $this->checkbox('name_sources][' . $source, $label, (bool) $data['name_sources'][$source], false, '', true);
+            $this->checkbox('name_sources][' . $source, $label, (bool) $data['name_sources'][$source], !$canSensitive, __('Turning this off needs the sensitive capability.', 'finetune-export'), true);
         }
         $this->textarea('operator_names', __('My list of names (one per line, always redacted)', 'finetune-export'), implode("\n", (array) $data['operator_names']));
         $this->textarea('allowlist', __('Allowlist: names and phrases to keep (one per line)', 'finetune-export'), implode("\n", (array) $data['allowlist']));

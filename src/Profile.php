@@ -391,6 +391,14 @@ final class Profile
         foreach ($this->redactionOff() as $type) {
             $out[] = 'redaction_off:' . $type;
         }
+        if ($this->redactionOn('name')) {
+            // Switching every name source off is name redaction off by another route.
+            foreach (self::NAME_SOURCES as $source) {
+                if (!$this->nameSourceOn($source)) {
+                    $out[] = 'name_source_off:' . $source;
+                }
+            }
+        }
         return $out;
     }
 

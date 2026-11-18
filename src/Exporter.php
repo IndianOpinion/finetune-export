@@ -296,7 +296,8 @@ final class Exporter
             throw new \InvalidArgumentException('Removal reason must be operator or retention.');
         }
         $job = $this->mustFind($jobId);
-        if ($job->state === Job::RUNNING || $job->state === Job::QUEUED) {
+        if (!$job->isFinal()) {
+            // A stalled job may still be resumed, and its next batch would write into the removed file.
             throw new ExportFailed('job_active', 'Cancel the job before deleting its files.');
         }
         $now = $this->clock->now();
@@ -412,7 +413,7 @@ final class Exporter
                 throw new ExportFailed('files_remain', 'Delete the files of job ' . $jobId . ' before its record.');
             }
         }
-        if ($job->state === Job::RUNNING || $job->state === Job::QUEUED) {
+        if (!$job->isFinal()) {
             throw new ExportFailed('job_active', 'Cancel the job before deleting its record.');
         }
         $this->jobs->delete($jobId);
