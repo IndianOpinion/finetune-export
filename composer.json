@@ -1,0 +1,54 @@
+{
+    "name": "indianopinion/finetune-export",
+    "description": "WordPress plugin that exports published posts as fine-tuning JSONL with best-effort redaction, a local token estimate and protected, expiring downloads.",
+    "type": "wordpress-plugin",
+    "license": "MIT",
+    "keywords": ["wordpress", "jsonl", "fine-tuning", "export", "redaction", "privacy"],
+    "homepage": "https://github.com/IndianOpinion/finetune-export",
+    "support": {
+        "issues": "https://github.com/IndianOpinion/finetune-export/issues",
+        "email": "hello@indianopinion.org"
+    },
+    "authors": [
+        {
+            "name": "Indian Opinion",
+            "email": "hello@indianopinion.org"
+        }
+    ],
+    "require": {
+        "php": ">=8.1",
+        "ext-dom": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*"
+    },
+    "require-dev": {
+        "php-stubs/wordpress-stubs": "^6.9",
+        "php-stubs/wp-cli-stubs": "^2.12",
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^10.5",
+        "squizlabs/php_codesniffer": "^3.10"
+    },
+    "suggest": {
+        "ext-intl": "Unicode NFC normalisation of exported text",
+        "ext-zlib": "gzip-compressed export files"
+    },
+    "autoload": {
+        "psr-4": {
+            "IndianOpinion\\FinetuneExport\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "IndianOpinion\\FinetuneExport\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "stan": "phpstan analyse --no-progress --memory-limit=1G",
+        "cs": "phpcs",
+        "check": ["@cs", "@stan", "@test"]
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
