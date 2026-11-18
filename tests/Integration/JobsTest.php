@@ -120,7 +120,7 @@ final class JobsTest extends TestCase
         $exporter = $this->exporter();
         $job = $exporter->step($exporter->start($this->profile(), 1)->id);
         // Another request is in the middle of a batch: the cancel waits for it.
-        $other = new OptionLock($this->clock);
+        $other = new OptionLock($this->clock, $GLOBALS['wpdb']);
         self::assertTrue($other->acquire($job->id, Exporter::LOCK_TTL));
         $job = $exporter->cancel($job->id, 1);
         self::assertTrue($job->cancelRequested);
@@ -155,7 +155,7 @@ final class JobsTest extends TestCase
         $this->clock->advance(2 * 60);
         $stalled = $exporter->detectStalled();
         self::assertSame([$job->id], array_map(static fn (Job $j): int => $j->id, $stalled));
-        self::assertNull((new OptionLock($this->clock))->holder());
+        self::assertNull((new OptionLock($this->clock, $GLOBALS['wpdb']))->holder());
         self::assertSame(Job::STALLED, $exporter->step($job->id)->state);
         $exporter->resume($job->id, 1);
         $job = $exporter->runForeground($job->id);
@@ -165,7 +165,7 @@ final class JobsTest extends TestCase
 
     public function testExpiredLockFromDeadJobIsTaken(): void
     {
-        $lock = new OptionLock($this->clock);
+        $lock = new OptionLock($this->clock, $GLOBALS['wpdb']);
         self::assertTrue($lock->acquire(99, Exporter::LOCK_TTL));
         self::assertFalse($lock->acquire(5, Exporter::LOCK_TTL));
         $this->clock->advance(Exporter::LOCK_TTL + 1);

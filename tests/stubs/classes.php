@@ -164,7 +164,9 @@ class wpdb
 {
     public string $prefix = 'wp_';
     public string $posts = 'wp_posts';
+    public string $options = 'wp_options';
     public string $last_error = '';
+    public bool $suppressErrors = false;
     public int $insert_id = 0;
     /** @var array<string, array<int, array<string, mixed>>> */
     public array $tables = [];
@@ -172,6 +174,13 @@ class wpdb
     public array $queries = [];
     /** @var array<string, int> */
     private array $autoIncrement = [];
+
+    public function suppress_errors(bool $suppress = true): bool
+    {
+        $previous = $this->suppressErrors;
+        $this->suppressErrors = $suppress;
+        return $previous;
+    }
 
     public function get_charset_collate(): string
     {
@@ -194,6 +203,16 @@ class wpdb
     /** @param array<string, mixed> $data */
     public function insert(string $table, array $data, mixed $format = null): int|false
     {
+        if ($table === $this->options) {
+            // The options table has a unique key on option_name: a second insert fails.
+            $name = (string) $data['option_name'];
+            if (isset($this->tables[$table][$name])) {
+                $this->last_error = "Duplicate entry '" . $name . "' for key 'option_name'";
+                return false;
+            }
+            $this->tables[$table][$name] = $data;
+            return 1;
+        }
         $this->autoIncrement[$table] = ($this->autoIncrement[$table] ?? 0) + 1;
         $id = $this->autoIncrement[$table];
         $data['id'] = $id;
@@ -208,6 +227,21 @@ class wpdb
      */
     public function update(string $table, array $data, array $where, mixed $format = null, mixed $whereFormat = null): int|false
     {
+        if (!isset($where['id'])) {
+            $n = 0;
+            foreach ($this->tables[$table] ?? [] as $key => $row) {
+                foreach ($where as $column => $value) {
+                    if ((string) ($row[$column] ?? '') !== (string) $value) {
+                        continue 2;
+                    }
+                }
+                if (array_merge($row, $data) !== $row) {
+                    $this->tables[$table][$key] = array_merge($row, $data);
+                    $n++;
+                }
+            }
+            return $n;
+        }
         $id = (int) $where['id'];
         if (!isset($this->tables[$table][$id])) {
             return 0;
@@ -249,6 +283,10 @@ class wpdb
 
     public function get_var(string $query): ?string
     {
+        if (preg_match('/SELECT option_value FROM `(\w+)` WHERE option_name = \'(\w+)\'/', $query, $m) === 1) {
+            $row = $this->tables[$m[1]][$m[2]] ?? null;
+            return $row === null ? null : (string) $row['option_value'];
+        }
         if (preg_match('/SELECT post_id FROM `(\w+)` WHERE job_id = (\d+) AND hash = \'(\w+)\'/', $query, $m) === 1) {
             $row = $this->tables[$m[1]][$m[2] . ':' . $m[3]] ?? null;
             return $row === null ? null : (string) $row['post_id'];

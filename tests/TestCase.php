@@ -102,7 +102,7 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
             new WpContentSource(),
             $this->jobs,
             $storage ?? $this->storage(),
-            new OptionLock($this->clock),
+            new OptionLock($this->clock, $GLOBALS['wpdb']),
             $cleaner ?? new Cleaner(),
             new Logger(),
             $this->clock,
