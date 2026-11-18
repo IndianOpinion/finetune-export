@@ -22,10 +22,16 @@ final class Canary
     public const UNKNOWN = 'unknown';
     public const NOT_NEEDED = 'not_needed';
 
+    /**
+     * @param array<string, string> $urls Web root directory => the URL it is served at. Empty maps
+     *                                    ABSPATH to the site URL and the content directory to the
+     *                                    content URL.
+     */
     public function __construct(
         private readonly Storage $storage,
         private readonly Logger $logger,
         private readonly Clock $clock,
+        private readonly array $urls = [],
     ) {
     }
 
@@ -66,7 +72,13 @@ final class Canary
             $this->logger->error('export directory is served over HTTP; jobs and downloads stopped', ['status' => $status]);
             return $this->store(self::SERVED, $dir->path, 'the canary was served with status 200');
         }
-        return $this->store(self::SAFE, $dir->path, 'the canary was not served (status ' . $status . ')');
+        if ($status < 400 || $status >= 500) {
+            // A redirect may lead to the file over another scheme or host, and a
+            // server error says nothing about the deny rule: neither is safe.
+            $this->logger->warning('canary check inconclusive; result unknown', ['status' => $status]);
+            return $this->store(self::UNKNOWN, $dir->path, 'inconclusive answer (status ' . $status . ')');
+        }
+        return $this->store(self::SAFE, $dir->path, 'the canary was refused (status ' . $status . ')');
     }
 
     /**
@@ -96,19 +108,29 @@ final class Canary
         return $last['result'] === self::SERVED && ($currentPath === null || $last['path'] === $currentPath);
     }
 
+    /**
+     * URL of a directory through the deepest web root that contains it.
+     */
     private function urlFor(string $path): ?string
     {
-        $env = $this->storage->environment();
-        $maps = [
-            [rtrim((string) Storage::normalise($env->abspath), '/'), rtrim(site_url(), '/')],
-            [rtrim((string) Storage::normalise($env->contentDir), '/'), rtrim(content_url(), '/')],
-        ];
-        foreach ($maps as [$base, $url]) {
+        $urls = $this->urls;
+        if ($urls === []) {
+            $env = $this->storage->environment();
+            $urls = [
+                (string) Storage::normalise($env->abspath) => site_url(),
+                (string) Storage::normalise($env->contentDir) => content_url(),
+            ];
+        }
+        $best = null;
+        foreach ($urls as $base => $url) {
+            $base = rtrim((string) $base, '/');
             if ($base !== '' && ($path === $base || str_starts_with($path, $base . '/'))) {
-                return $url . substr($path, strlen($base));
+                if ($best === null || strlen($base) > strlen($best[0])) {
+                    $best = [$base, rtrim($url, '/')];
+                }
             }
         }
-        return null;
+        return $best === null ? null : $best[1] . substr($path, strlen($best[0]));
     }
 
     /**

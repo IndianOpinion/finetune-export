@@ -18,7 +18,7 @@ use IndianOpinion\FinetuneExport\Support\Clock;
 final class LinkSigner
 {
     public const TOKEN_LENGTH = 83;
-    public const TOKEN_PATTERN = '/^[A-Za-z0-9_-]{83}$/';
+    public const TOKEN_PATTERN = '/^[A-Za-z0-9_-]{83}$/D';
     private const VERSION = 1;
     private const KINDS = ['train' => 1, 'validation' => 2];
 

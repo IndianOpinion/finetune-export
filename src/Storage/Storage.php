@@ -23,8 +23,8 @@ use IndianOpinion\FinetuneExport\UnsafeDirectory;
 final class Storage
 {
     public const DEFAULT_NAME = 'finetune-exports';
-    public const FILE_PATTERN = '/^export-(\d{1,19})-([a-f0-9]{32})(-validation)?\.jsonl(\.gz)?(\.part)?$/';
-    public const CANARY_PATTERN = '/^canary-[a-f0-9]{32}\.txt$/';
+    public const FILE_PATTERN = '/^export-(\d{1,19})-([a-f0-9]{32})(-validation)?\.jsonl(\.gz)?(\.part)?$/D';
+    public const CANARY_PATTERN = '/^canary-[a-f0-9]{32}\.txt$/D';
     public const DENY_FILES = ['index.php', '.htaccess', 'web.config'];
     private const CHUNK = 1048576;
 
@@ -72,7 +72,7 @@ final class Storage
             }
         }
         $insideWebRoot = false;
-        foreach ([$this->env->abspath, $this->env->contentDir] as $root) {
+        foreach (self::webRoots($this->env) as $root) {
             $rootReal = self::realish((string) self::normalise($root));
             if ($rootReal !== '' && self::inside($real, $rootReal)) {
                 $insideWebRoot = true;
@@ -95,6 +95,53 @@ final class Storage
         }
         $final = $this->env->siteId > 0 ? $path . '/site-' . $this->env->siteId : $path;
         return new ResolvedDirectory($final, $path, $source, $insideWebRoot);
+    }
+
+    /**
+     * Every directory a web server may serve: ABSPATH, the content directory,
+     * the site's home directory (WordPress in its own subdirectory) and the
+     * document root. A filesystem root is ignored, since it would count every
+     * path as public.
+     *
+     * @return list<string>
+     */
+    public static function webRoots(StorageEnvironment $env): array
+    {
+        $out = [];
+        foreach (array_merge([$env->abspath, $env->contentDir], $env->webRoots) as $root) {
+            $normal = self::normalise((string) $root);
+            if ($normal === null || $normal === '/' || preg_match('#^[A-Za-z]:/?$#', $normal) === 1) {
+                continue;
+            }
+            $out[] = $normal;
+        }
+        return array_values(array_unique($out));
+    }
+
+    /**
+     * The directory the site's home URL is served from when WordPress lives
+     * in its own subdirectory (home https://example.org, site URL
+     * https://example.org/wp, ABSPATH /srv/web/wp/ gives /srv/web). Null when
+     * the two URLs share a path or the layout cannot be worked out.
+     */
+    public static function homeDirectory(string $abspath, string $homeUrl, string $siteUrl): ?string
+    {
+        $base = self::normalise($abspath);
+        $homePath = '/' . trim((string) parse_url($homeUrl, PHP_URL_PATH), '/');
+        $sitePath = '/' . trim((string) parse_url($siteUrl, PHP_URL_PATH), '/');
+        if ($base === null || $homePath === $sitePath) {
+            return null;
+        }
+        $prefix = rtrim($homePath, '/') . '/';
+        if (!str_starts_with($sitePath, $prefix)) {
+            return null;
+        }
+        $relative = substr($sitePath, strlen($prefix));
+        if ($relative === '' || !str_ends_with(strtolower($base), '/' . strtolower($relative))) {
+            return null;
+        }
+        $home = substr($base, 0, -strlen('/' . $relative));
+        return $home === '' ? '/' : $home;
     }
 
     /**
@@ -129,7 +176,7 @@ final class Storage
 
     public static function fileName(int $jobId, string $random, string $kind, bool $gzip, bool $part): string
     {
-        if (preg_match('/^[a-f0-9]{32}$/', $random) !== 1) {
+        if (preg_match('/^[a-f0-9]{32}$/D', $random) !== 1) {
             throw new \InvalidArgumentException('Bad random part.');
         }
         return 'export-' . $jobId . '-' . $random . ($kind === 'validation' ? '-validation' : '')

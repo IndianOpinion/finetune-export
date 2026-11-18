@@ -18,6 +18,9 @@ final class StorageEnvironment
      * @param string|null $filterDir        Value of the directory filter.
      * @param string|null $acknowledgedPath Path the operator acknowledged as inside the web root.
      * @param int         $siteId           Blog id on multisite, 0 on a single site.
+     * @param list<string>  $webRoots         Other directories a web server serves: the site's home
+     *                                        directory when WordPress lives in a subdirectory, and the
+     *                                        server's document root when PHP reports one.
      */
     public function __construct(
         public readonly string $abspath,
@@ -27,6 +30,7 @@ final class StorageEnvironment
         public readonly ?string $filterDir = null,
         public readonly ?string $acknowledgedPath = null,
         public readonly int $siteId = 0,
+        public readonly array $webRoots = [],
     ) {
     }
 
@@ -39,7 +43,8 @@ final class StorageEnvironment
             $this->constantDir,
             $this->filterDir,
             $path,
-            $this->siteId
+            $this->siteId,
+            $this->webRoots
         );
     }
 }

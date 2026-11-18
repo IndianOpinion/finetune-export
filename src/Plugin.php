@@ -304,7 +304,32 @@ final class Plugin
             is_string($filtered) ? $filtered : null,
             $this->settings->acknowledgedPath(),
             is_multisite() ? get_current_blog_id() : 0,
+            array_keys($this->webRootUrls()),
         );
+    }
+
+    /**
+     * Directories a web server serves beyond ABSPATH and the content
+     * directory, with the URL each is served at: the home directory when
+     * WordPress lives in a subdirectory, and the document root.
+     *
+     * @return array<string, string> path => URL
+     */
+    public function webRootUrls(): array
+    {
+        $out = [];
+        $home = Storage::homeDirectory(ABSPATH, home_url('/'), site_url('/'));
+        if ($home !== null) {
+            $out[$home] = rtrim(home_url('/'), '/');
+        }
+        $docroot = isset($_SERVER['DOCUMENT_ROOT']) && is_string($_SERVER['DOCUMENT_ROOT'])
+            ? Storage::normalise(sanitize_text_field(wp_unslash($_SERVER['DOCUMENT_ROOT'])))
+            : null;
+        $origin = DownloadHandler::originOf(home_url('/'));
+        if ($docroot !== null && $docroot !== '/' && $origin !== null && !isset($out[$docroot])) {
+            $out[$docroot] = $origin;
+        }
+        return $out;
     }
 
     public function storage(): Storage
@@ -333,11 +358,12 @@ final class Plugin
 
     public function exporter(): Exporter
     {
+        global $wpdb;
         return $this->exporter ??= new Exporter(
             new WpContentSource(),
             $this->jobs(),
             $this->storage(),
-            new OptionLock($this->clock),
+            new OptionLock($this->clock, $wpdb),
             new Cleaner(),
             $this->logger,
             $this->clock,
@@ -361,7 +387,11 @@ final class Plugin
 
     public function canary(): Canary
     {
-        return new Canary($this->storage(), $this->logger, $this->clock);
+        $urls = [
+            (string) Storage::normalise(ABSPATH) => rtrim(site_url('/'), '/'),
+            (string) Storage::normalise(WP_CONTENT_DIR) => rtrim(content_url(), '/'),
+        ] + $this->webRootUrls();
+        return new Canary($this->storage(), $this->logger, $this->clock, $urls);
     }
 
     public function downloadHandler(): DownloadHandler
