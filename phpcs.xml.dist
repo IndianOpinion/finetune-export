@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<ruleset name="finetune-export">
+    <description>PSR-12 for the plugin source, tests and tools.</description>
+    <file>src</file>
+    <file>tests</file>
+    <file>tools</file>
+    <file>examples</file>
+    <file>finetune-export.php</file>
+    <file>uninstall.php</file>
+    <file>autoload.php</file>
+    <exclude-pattern>tests/stubs/*</exclude-pattern>
+    <arg name="extensions" value="php"/>
+    <arg name="colors"/>
+    <arg value="sp"/>
+    <rule ref="PSR12">
+        <exclude name="Generic.Files.LineLength"/>
+    </rule>
+    <!-- The plugin entry files declare headers and run code, as WordPress expects. -->
+    <rule ref="PSR1.Files.SideEffects">
+        <exclude-pattern>finetune-export.php</exclude-pattern>
+        <exclude-pattern>uninstall.php</exclude-pattern>
+        <exclude-pattern>autoload.php</exclude-pattern>
+        <exclude-pattern>examples/*</exclude-pattern>
+        <exclude-pattern>tools/*</exclude-pattern>
+        <exclude-pattern>tests/bootstrap.php</exclude-pattern>
+        <exclude-pattern>tests/phpstan-bootstrap.php</exclude-pattern>
+    </rule>
+</ruleset>

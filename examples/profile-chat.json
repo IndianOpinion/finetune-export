@@ -1,0 +1,17 @@
+{
+    "id": "chat-headlines",
+    "name": "Chat: headline to article",
+    "shape": "chat",
+    "fields": ["title", "body", "date"],
+    "format": "text",
+    "templates": {
+        "system": "You write clear news articles.",
+        "user": "Write an article with the headline: {title}",
+        "assistant": "{body}"
+    },
+    "min_length": 400,
+    "max_tokens": 4000,
+    "over_limit": "truncate",
+    "validation_percent": 5,
+    "allowlist": ["Mahatma Gandhi"]
+}

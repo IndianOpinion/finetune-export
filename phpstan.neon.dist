@@ -1,0 +1,14 @@
+parameters:
+    level: 8
+    paths:
+        - src
+        - finetune-export.php
+        - uninstall.php
+        - autoload.php
+        - tools
+    scanFiles:
+        - vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
+        - vendor/php-stubs/wp-cli-stubs/wp-cli-stubs.php
+    bootstrapFiles:
+        - tests/phpstan-bootstrap.php
+    treatPhpDocTypesAsCertain: false
