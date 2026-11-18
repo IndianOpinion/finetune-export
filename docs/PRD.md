@@ -920,6 +920,58 @@ To be answered by the builder in `docs/ARCHITECTURE.md`.
 8. Should the screen offer a downloadable redaction report (counts only) as
    a separate CSV, for an operator's records of processing?
 
+### 13.1 Answers recorded at build time
+
+The builder answered the questions above; `docs/ARCHITECTURE.md` gives the
+reasons. Where an answer changes a case, the answer wins over the case.
+
+1. Retention defaults to "keep until I delete" (0 days), not 14 days. Section
+   7 and case 95 read with that default.
+2. User logins are redacted too, under the single-word limits of case 45.
+3. An expired link answers 404 with the common body, not 410. This replaces
+   the 410 in case 74 and acceptance test 68. The download history still
+   records the outcome `expired`.
+4. Calibration is an offline script, `tools/calibrate.php`, that takes
+   reference counts or a tokeniser the operator supplies. No tokeniser ships.
+5. No fallback to the system temporary directory. With no acceptable
+   directory the plugin fails closed.
+6. A per-category opt-out exists as well as the per-post one. Posts in such
+   a category are skipped with reason `opted_out_category`; uninstall removes
+   the term meta.
+7. No multi-turn chat records in 0.1.0.
+8. No CSV report. Redaction counts are shown on screen, in `jobs show` and
+   in the jobs REST route only.
+
+### 13.2 Departures accepted at review
+
+1. **Lock.** The batch lock expires after 10 minutes, not 30, and a
+   watchdog cron event 15 minutes after a batch starts takes over the lock
+   of a batch that died, so case 81 resumes on its own. "One job at a time"
+   (case 82) is kept by job state: queued jobs wait and run in id order. A
+   job with no progress for 30 minutes is still marked stalled (case 84).
+   The lock row is written with an atomic INSERT and a compare-and-swap
+   UPDATE, never through the options API, whose insert is an upsert.
+2. **Duplicate register.** Content hashes for case 12 live in a second
+   table (job id, hash, first post id), cleared when the job ends, instead
+   of a growing list in the job row. Uninstall drops both tables.
+3. **Directory resolution.** Only the first candidate that is set in case
+   61 is considered. If the constant is set and refused, the filter and the
+   default are not tried, and nothing runs.
+4. **Web root.** For cases 62 and 68 the web root is ABSPATH, the content
+   directory, the home directory when WordPress lives in a subdirectory of
+   the site, and the document root PHP reports. The case 61c default is
+   refused when it falls inside one of them.
+5. **Callback arguments.** Filters that receive "post" in section 5.5 get a
+   read-only `PostData` object, not `WP_Post`; `$post->id` is the post id.
+6. **Self-check answers.** Only a 4xx answer counts as safe. A redirect, a
+   server error or a 200 without the canary is "unknown", like a network
+   error.
+7. **Name sources.** Switching any name source off while name redaction is
+   on needs `finetune_export_sensitive`, like turning a redaction type off
+   (case 50).
+8. **Deleting files** needs the job in a final state; a stalled job is
+   cancelled first (cases 83, 84 and 94).
+
 ## 14. Lessons from production
 
 Written as rules. They come from serving private export archives from a live

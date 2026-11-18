@@ -34,7 +34,7 @@ The package type is `wordpress-plugin`: with `composer/installers` in your proje
    ```php
    define('FINETUNE_EXPORT_DIR', '/srv/private/finetune-exports');
    ```
-   Without it the plugin uses `finetune-exports` one level above the WordPress root, if that parent is writable. If no safe directory exists, nothing runs.
+   Without it the plugin uses `finetune-exports` one level above the WordPress root, if that parent is writable. If no safe directory exists, nothing runs. When WordPress lives in its own subdirectory (site URL `/wp` under the home URL, as in many Composer layouts), that default is inside the served home directory and is refused: set `FINETUNE_EXPORT_DIR`.
 2. Tools > Fine-tune export > Profiles: pick fields, shape and templates. Press **Preview these settings** to see the first records after cleaning and redaction. Nothing is written.
 3. Press **Run export**. The job runs in batches through WP-Cron. Watch it on the Jobs tab.
 4. On the Jobs tab press **Create train download link**. The link works only for you, while signed in, for 60 minutes by default.
@@ -95,7 +95,7 @@ Per post: the **Exclude from training exports** switch in the editor. Per catego
 ### Capabilities
 
 - `finetune_export_run`: preview, count, run, download, delete your own jobs. Administrators get it on activation.
-- `finetune_export_sensitive`: unpublished or password-protected posts, turning off redaction, the web root acknowledgement, acting on other users' jobs. Administrators on a single site; super admins only on multisite.
+- `finetune_export_sensitive`: unpublished or password-protected posts, turning off any redaction type or name source, the web root acknowledgement, acting on other users' jobs. Administrators on a single site; super admins only on multisite.
 
 ### Hooks
 
@@ -135,7 +135,9 @@ REST: `GET|HEAD /wp-json/finetune-export/v1/download/<token>`, `POST /finetune-e
 
 The **token estimate**: ASCII letter and digit runs count `ceil(length / 4)`, other ASCII punctuation 1, whitespace 0, Han, Kana and Hangul 1 per character, every other character `ceil(bytes / 2)`, plus 4 per chat message or 3 per record. It can be off by 25 percent or more, most for non-Latin scripts. Measure it against your model's tokeniser with `php tools/calibrate.php` (offline, see the script header) and plug in your own estimator if you need better.
 
-If the directory is inside the web root (acknowledged), a **self-check** on save and once a day writes a random canary file and asks for it over HTTP through the site's URL. If it is served, jobs and downloads stop until the check passes. A network error is reported as "unknown", never as safe.
+The **web root** is ABSPATH, the content directory, the home directory when WordPress lives in a subdirectory of the site, and the server's document root when PHP reports one. A directory inside any of them needs the acknowledgement.
+
+If the directory is inside the web root (acknowledged), a **self-check** on save and once a day writes a random canary file and asks for it over HTTP through the site's URL. If it is served, jobs and downloads stop until the check passes. A network error, a redirect or a server error is reported as "unknown", never as safe; only a 4xx refusal counts as safe.
 
 ## Limitations
 

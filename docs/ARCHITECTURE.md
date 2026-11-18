@@ -76,14 +76,23 @@ profile --> WpContentSource.nextIds (ascending, batch) --> Pipeline.process(id)
   constant is defined and refused, the filter and default are not tried.
   An operator who set a path expects that path; silently writing elsewhere
   would surprise them.
-- **Web root test.** A path inside ABSPATH or WP_CONTENT_DIR (the whole
-  content directory counts as public) needs the acknowledgement, stored with
+- **Web root test.** A path inside ABSPATH, WP_CONTENT_DIR (the whole
+  content directory counts as public), the home directory when WordPress
+  lives in a subdirectory of the site (worked out from the home and site
+  URLs), or the document root PHP reports (a filesystem root is ignored) needs the acknowledgement, stored with
   the normalised path and void on any change. Symbolic links are resolved on
   the longest existing prefix, so a link into uploads is refused. Relative
   paths and `..` segments are refused.
 - **Multisite** uses `site-<blog id>` under the directory on every site.
-- **Lock.** The lock is a per-batch mutex with an owner token in a
-  non-autoloaded option, created with `add_option` (an INSERT). It expires
+- **Lock.** The lock is a per-batch mutex with an owner token in one
+  non-autoloaded row of the options table, written with SQL that MySQL
+  makes atomic: a plain INSERT, which fails on the unique option name, and
+  a compare-and-swap UPDATE on the value this request read. The lock is read
+  from the database, never from the object cache. `add_option` is not used:
+  it sends INSERT ... ON DUPLICATE KEY UPDATE, so two requests racing past
+  its existence check both get a truthy result (verified against MySQL 8.0
+  in review, where eight racing processes then always produced exactly one
+  holder). It expires
   after 10 minutes, not 30: a batch takes seconds, and the watchdog cron event
   (15 minutes after a batch starts) must be able to take over the lock of a
   batch that died, so case 81 resumes on its own. "One job at a time" is kept
@@ -139,6 +148,18 @@ profile --> WpContentSource.nextIds (ascending, batch) --> Pipeline.process(id)
   key is HMAC-SHA256 of a fixed label under the auth, secure auth and logged
   in salts plus a 64-hex-character per-site secret.
 - **Validation file** has its own link (file kind in the token).
+- **Canary answers.** Status 200 with the canary content is `served`. Only a
+  4xx answer is `safe`. A redirect (it may lead to the file over another
+  scheme or host), a server error, a 200 without the canary, or a network
+  error is `unknown`, which keeps the warning and lets work continue
+  (failure table). The canary URL comes from the deepest web root that
+  holds the directory.
+- **Name sources.** Switching any name source off, while name redaction is
+  on, needs the sensitive capability like turning a redaction type off:
+  with every source off, name redaction would be off by another route.
+- **Deleting files** is allowed only for a job in a final state
+  (complete, cancelled, failed). A stalled job is cancelled first, since a
+  resume would write into the removed file.
 - **Canary served mid-job** fails the job with `directory_unsafe`; the
   operator reruns it after fixing the server.
 - **Count and preview** need no directory: they write nothing.
