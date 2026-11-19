@@ -164,6 +164,10 @@ Uninstall removes the options, the two job tables, the per-post and per-category
 
 **How do I keep a public figure's name?** Add it to the profile's allowlist.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
